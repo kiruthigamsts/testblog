@@ -1,0 +1,887 @@
+<!--
+************************************************************************************
+Name: Estimators
+Description : Estimator Component
+@author : MST Solutions
+
+Modification Log :
+Developer                   Date                       Description
+************************************************************************************
+MST Solutions               5/23/2019                   CMPS-4583:
+                                                        Cached search issues
+MST Solutions               5/23/2019                   CMPS-4132:
+                                                        Comp price cannot be negative
+MST Solutions               5/27/2019                   CMPS-4563:
+                                                        Parts not staying accepted     
+MST Solutions               6/3/2019                    CMPS-4779
+                                                        Estimatorlineitem table column
+                                                        alignment
+MST Solutions               6/4/2019                    CMPS-4122
+                                                        Qty/Board format change       
+MST Solutions               6/10/2019                   CMPS-4726
+                                                        Estimators Code Review Changes 
+MST Solutions               7/22/2019                   CMPS-4598
+                                                        Competitor label is displayed twice
+                                                        issue fixed   
+MST Solutions               8/13/2019                   CMPS-5050
+                                                        Create quote from estimators        
+MST Solutions               8/19/2019                   CMPS-5051
+                                                        Quote Validations  
+MST Solutions               8/21/2019                   CMPS-5186
+                                                        Can estimate issue  
+MST Solutions               8/22/2019                   CMPS-5185
+                                                        Quote bugs  
+MST Solutions               8/23/2019                   CMPS-5052
+                                                        Estimator - Quote validation        
+MST Solutions               9/18/2019                   CMPS-5280
+                                                        Save estimator while creating quote     
+MST Solutions               9/19/2019                   CMPS-5251
+                                                        Estimators highlight the whole 
+                                                        row while showing errors  
+MST Solutions               10/18/2019                   CMPS-4940
+                                                        Freeze row   
+MST Solutions				02/01/2020				    7412
+													    Quoting : Ability to Select All / Unselect All Products.	
+MST Solutions               1/13/2019                   8398
+                                                        Getting sorry to Interrupt error while choosing CPN in Estimator
+MST Solutions               1/14/2020                   8353
+														Update Funnel Stage list values in the Estimator (Client Engagement Funnel Redesign)
+MST Solutions 	            2/03/2020                   8470
+														Estimator mobile layout - In the mobile layout, the quote check box does not have a label  
+MST Solutions               04/07/2020                  8213 
+													    Help text/popup to identify why the line item cannot be quoted														
+************************************************************************************
+-->
+<aura:component  controller="EstimatorsHandler_AC" access="global" > 
+    
+    <!-- Call the doInit constructor method to load the necessary values -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <!-- /Call the doInit constructor method to load the necessary values -->
+    
+    <!--use JQuery Data Table css,Js and jQUERY js file in lightning component by using ltng:require component
+    <ltng:require scripts='{!$Resource.jquery224}'/>
+    <ltng:require styles="/resource/jqueryuiV1/jqueryui/jquery-ui.css"
+                  scripts="/resource/jqueryuiV1/jqueryui/jquery-ui.js"
+                  />
+    
+    -->
+    <!-- Define attribute to hold the value -->
+    <aura:attribute name="EstimatorInstance" type="Object" /> 
+    <aura:attribute name="EstimatorInstanceCopy" type="object" default="{}"/> 
+    <aura:attribute name="userPermission" type="boolean"/>
+    <aura:attribute name="Index" type="String"/> 
+    <aura:attribute name="CollapseLineItem" type="Boolean" default="false"/> 
+    <aura:attribute name="CollapseLineItem_child" type="Boolean" default="false"/> 
+    <aura:attribute name="productFamily" type="String" />
+    <aura:attribute name="IconNameChild" type="String" default="utility:chevrondown"/>
+    <aura:attribute name="h4mIconToggle" type="String" default="utility:chevrondown"/>
+    <aura:attribute name="toggleClass" type="String" default=""/>
+    <aura:attribute name="rowClass" type="String" default="hide-mobile"/>
+    <aura:attribute Name="selItem" type="object"  access="public" />
+    <aura:attribute name="statusOptions" type="list"/>
+    <aura:attribute name="catalogPartNo" type="String[]"/>
+    <aura:attribute name="stageOptions" type="list"/>
+    <aura:attribute name="competitorOptions" type="list"/>
+    <aura:attribute name="picklistEstimator" type="Estimators__c" default="{sobjectType : 'Estimators__c'}"/>
+    <aura:attribute name="picklistProduct" type="Product2" default="{sobjectType : 'Product2'}"/>
+    <aura:attribute name="projectStagePicklist" type="Opportunity" default="{sobjectType : 'Opportunity'}"/>
+    <!-- /Define attribute to hold the value -->
+    <aura:attribute name="projectId" type="string"/>
+    <aura:attribute name="familyName" type="String"/>
+    <aura:attribute name="recordDisplayName" type="String"/>
+    <aura:attribute name="catalogPartNoValues" type="String"/>
+    <aura:attribute name="deviceFamilySubValues" type="String" default=""/>
+    <aura:attribute name="productFamilyValues" type="String" default=""/>
+    <aura:attribute name="catalogNumberValues" type="String" default=""/>
+    <aura:attribute name="productFamilyRecordName" type="String" default="PIC12CR509A"/>
+    <aura:attribute name="opportunityList" type="Opportunity"/> 
+    <aura:attribute name="OpportunityEAU" type="Decimal"/> 
+    <aura:attribute name="familycolumn" type="String"/> 
+    <aura:attribute name="basepartcolumn" type="String"/> 
+    <aura:attribute name="catalogpartcolumn" type="String"/>
+    <aura:attribute name="basepartonlycolumn" type="String"/>
+    <aura:attribute name="container" type="String"/>
+    <aura:method name="showErrors" action="{!c.showErrorMessage}" access="PUBLIC"/>
+    <aura:method name="hideErrors" action="{!c.hideErrorMessage}" access="PUBLIC"/>
+    <aura:method name="showDupeErrors" action="{!c.showDupeErrors}" access="PUBLIC"/>
+    <aura:method name="showInvalidCPN" action="{!c.showInvalidCPN}" access="PUBLIC"/>
+    <aura:method name="showDuplicateCPN" action="{!c.showDuplicateCPN}" access="PUBLIC"/>
+    <aura:method name="showInvalidBasePart" action="{!c.showInvalidBasePart}" access="PUBLIC"/>
+    <aura:method name="showDuplicateBasePart" action="{!c.showDuplicateBasePart}" access="PUBLIC"/>
+     <aura:method name="showCanProject" action="{!c.showCanProject}" access="PUBLIC"/>
+    <aura:method name="showBasePartCanProject" action="{!c.showBasePartCanProject}" access="PUBLIC"/>
+    <aura:method name="showDeviceFamily" action="{!c.showDeviceFamily}" access="PUBLIC"/>
+    <aura:attribute name="DeviceFamily" type="Boolean" default="true" />
+    <aura:method name="showInvalidDSC" action="{!c.showInvalidDSC}" access="PUBLIC"/>
+    <aura:attribute name="blankQTY" type="string" default="slds-hide" />
+    <aura:attribute name="noselection" type="string" default="slds-hide" />
+    <aura:attribute name="CompPriceValidation" type="string" default="slds-hide" />
+    <aura:attribute name="isValidCPN" type="Boolean" default="true" />
+    <aura:attribute name="DuplicateCPN" type="Boolean" default="true" />
+    <aura:attribute name="CanProjectFlag" type="Boolean" default="true" />
+    <aura:attribute name="DuplicateBasePart" type="Boolean" default="true" />
+    <aura:attribute name="isValidBasePart" type="Boolean" default="true" />
+    <aura:attribute name="isValidBDSC" type="Boolean" default="true" />
+    <aura:attribute name="TargetPrice" type="string" default="slds-hide" />
+    <aura:attribute name="cpn" type="string" default="slds-hide" />
+    <aura:attribute name="competitorvalues" type="string[]" />
+    <aura:attribute name="compact" type="Boolean" default="false"/>
+    <aura:attribute name="SearchKeyWord1" type="String" default=""/>
+    <aura:attribute name="SearchKeyWord2" type="String" default=""/>
+    <aura:attribute name="SearchKeyWord3" type="String" default=""/>
+    <aura:attribute name="selectedLabel" type="String" default=""/>
+    <aura:attribute name="products" type="product2[]"/>
+    <aura:attribute name="selectedProduct" type="Product2"/>
+    <aura:attribute name="ShowProducts" type="Boolean" default="false"/>
+    <aura:attribute name="canProject" type="Boolean" default="false"/>
+    <aura:attribute name="basePartCanProjectFlag" type="Boolean" default="true"/>
+    <aura:attribute name="ListPriceFlag" type="Boolean" default="false"/>
+    <aura:attribute name="productNames" type="string[]"/>
+    <aura:attribute name="offset" type="Integer" default="0"/>
+    <aura:method name="ItemExpand" action="{!c.ItemExpand}" access="PUBLIC"/>
+    <aura:method name="ItemClose" action="{!c.ItemClose}" access="PUBLIC"/>
+    <aura:attribute name="EstimatorsProductList" type="EstimatorsProductListHandler_AC"/>
+    <aura:attribute name="EstimatorsProductListHandler" type="EstimatorsProductListHandler_AC[]"/> 
+	 <aura:attribute name="family" type="string" 
+                    default="slds-input__icon slds-input__icon_right slds-icon-text-default slds-hide" />
+    <aura:attribute name="basepart" type="string" 
+                    default="slds-input__icon slds-input__icon_right slds-icon-text-default slds-hide" />
+    <aura:attribute name="catalogpart" type="string" 
+                    default="slds-input__icon slds-input__icon_right slds-icon-text-default slds-hide" />
+    <aura:attribute name="canProjectProducts" type="string" />
+    <aura:attribute name="warningMsg" type="string" />
+    <aura:attribute name="showWarningMessage" type="Boolean" default="false" />
+    <aura:attribute name="toQuote" type="Boolean" default="false"/>
+    <aura:attribute name="disableToQuote" type="Boolean" default="false"/>
+    <aura:attribute name="isEstimatorValChanged" type="Boolean" default="false"/>
+    <aura:attribute name="isBUUser" type="boolean" default="true"/>
+    <aura:attribute name="showInvalidError" type="boolean" default="false"/>
+    <aura:attribute name="invalidStatusChangeErrorMsg" type="String" default=""/>
+    <aura:attribute name="invalidCPNChangeErrorMsg" type="String" default=""/>
+    <aura:attribute name="clientStatusPicklistVal" type="List" default=""/>
+    <aura:attribute name="funnelStagePicklistVal" type="List" default=""/>
+    <aura:attribute name="competitorsPicklistVal" type="List" default=""/>
+
+    <aura:method name="showInvalidStatusChangeHandler" action="{!c.showInvalidStatusChangeHandler}" access="PUBLIC">
+        <aura:attribute name="quotenumber" type="String" default=""/> 
+    </aura:method>
+    <aura:method name="showInvalidCPNChangeHandler" action="{!c.showInvalidCPNChangeHandler}" access="PUBLIC">
+        <aura:attribute name="quotenumber" type="String" default=""/> 
+    </aura:method>
+
+	<aura:handler event="c:EstimatorActionEvent" action="{!c.handleApplicationEvent}"/>
+	
+    <!--Lightning Datatable Infinite Loading-->
+    <aura:attribute name="columns" type="List" default="[]"/>
+    <aura:attribute name="isMobileMode" type="Boolean" default="false"/>
+	<aura:attribute name="keyFieldValue" type="String" default="Id"/>
+    <!--Lightning Datatable Infinite Loading-->
+
+
+
+    <!-- Lookup field attributes -->
+    <aura:attribute name="chosenRecordLabel"
+                    type="String"
+                    description="This is used to show the selected picklist values in search input"/>
+    <aura:registerEvent name="EstimatorItemChange" type="c:EstimatorItemChange"/>
+    <aura:registerEvent name="DeleteEstimatorRow" type="c:DeleteEstimatorRow"/> 
+    <!-- Lookup field attributes -->
+    <aura:handler name="change" value="{!v.CollapseLineItem_child}" action="{!c.checkScrollContainer}"/>
+    <aura:handler name="change" value="{!v.EstimatorInstance}" action="{!c.estimatorInstanceChange}"/>
+
+    <tr class="header4mobile expand cursor-pointer slds-m-top_x-small estimator-row">
+        <td colspan="4" class="noBefore">
+            <lightning:button onclick="{!c.handleH4MClick}">
+                <div class="slds-grid">
+                    <div class="slds-col slds-truncate text-bold">
+                        {!v.Index + 1}
+                    </div>
+                    <div class="slds-col slds-text-align_right">
+                        <lightning:icon iconName="{!v.h4mIconToggle}" size="small"/>
+                    </div>
+                </div>
+            </lightning:button>
+        </td>
+    </tr>
+   
+    <!-- Estimator data row start here -->   
+    <tr class="{!v.rowClass + ' hide-mobile slds-hint-parent estimator-row'}" id="{!'tr'+v.Index}"  style="{!(v.toQuote)?'background:#f1efec':''}" >
+        <td role="gridcell" class="{!v.toggleClass + ' slds-cell-wrap min-width_4 hide-mobile'}" data-label="Action" >                           
+            <div class="{!v.toggleClass + ' indexValue'}">{!v.Index + 1}</div>
+        </td>
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile">
+            <div class="slds-hide_medium">Client Status</div>  
+            <!-- ui:inputSelect disabled="{!v.userPermission}"  aura:id="Status"  value="{!v.EstimatorInstance.Status__c}"  class="slds-select control" change="{!c.statusChange}"/-->
+            <lightning:select name="Client Status" aura:id="Status" disabled="{!v.userPermission}" value="{!v.EstimatorInstance.Status__c}" onchange="{!c.statusChange}">
+                <aura:iteration items="{!v.clientStatusPicklistVal}" var="optionVal">
+                    <option text="{!optionVal.label}" value="{!optionVal.value}" selected="{!optionVal.selected}"/>
+                </aura:iteration>
+            </lightning:select>
+        </td>
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile">
+            <div class="slds-hide_medium">Funnel Stage</div>
+            <!-- ui:inputSelect aura:id="FunnelStage" disabled="{!v.userPermission}" value="{!v.EstimatorInstance.Funnel_Stage__c}"  class="slds-select control" /-->
+            <lightning:select name="Funnel Stage" aura:id="FunnelStage" disabled="{!v.userPermission}" value="{!v.EstimatorInstance.Funnel_Stage__c}">
+                <aura:iteration items="{!v.funnelStagePicklistVal}" var="optionVal">
+                    <option text="{!optionVal.label}" value="{!optionVal.value}" selected="{!optionVal.selected}"/>
+                </aura:iteration>
+            </lightning:select>
+        </td>
+        <!--PRODUCT FAMILY-->
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile" title="{!v.EstimatorInstance.Device_Family_Sub_Category__c}">   
+           <div class="slds-hide_medium">Product Family</div>
+           <div class="slds-form-element__control slds-grow slds-input-has-icon slds-input-has-icon_left-right">
+           
+                <lightning:buttonIcon size="medium" iconName="utility:search" aura:id="myBtn"
+                                      class="slds-input__icon slds-input__icon_left slds-icon-text-default search btn-search"
+                                      variant="bare" name="family" onclick="{!c.showProducts}"/>
+             
+               <!--
+                <input type="text" disabled="{!v.userPermission}" 
+                       id="{!'deviceFamilySubValues'+v.Index + v.projectId}"
+                       onkeyup="{!c.search}" 
+                       name="family"
+                       onmouseup="{!c.search}"
+                       class="slds-input" aura:id="{!'deviceFamilySubValues'+v.Index + v.projectId}" 
+                       value="{!v.EstimatorInstance.Device_Family_Sub_Category__c}"
+                       data-label="family"/>
+                -->
+               <div onkeyup="{! c.search }" data-name="family" >
+                   <lightning:input name="family"
+                                    value="{!v.EstimatorInstance.Device_Family_Sub_Category__c}"
+                                    data-label="family"
+                                    disabled="{!v.userPermission}"
+                                    aura:id="deviceFamilySubValues"
+                                    onchange = "{!c.search}"
+                                    onkeyup = ""
+                                    type="text"
+                                    />
+               </div>
+               <lightning:buttonIcon size="medium" iconName="utility:clear" aura:id="clrdeviceFamilySubValues"
+                                     class="slds-input__icon slds-input__icon_right slds-icon-text-default slds-hide btn-clear" 
+                                     variant="bare" name="family" onclick="{!c.clear}"/>
+                
+            </div>
+            
+            <aura:if isTrue="{!!v.isValidBDSC}">
+                <span style="color: red;">Please enter valid product family</span>
+            </aura:if>	
+        </td> 
+        <!--BASE PART-->
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile" title="{!v.EstimatorInstance.Product_Family__c}">
+            <div class="slds-hide_medium">Base Part</div>
+           <div class="slds-form-element__control slds-grow slds-input-has-icon slds-input-has-icon_left-right">
+                
+                <lightning:buttonIcon size="medium" iconName="utility:search" aura:id="myBtn"
+                                      class="slds-input__icon slds-input__icon_left slds-icon-text-default btn-search"
+                                      variant="bare" name="basepart" onclick="{!c.showProducts}"/>
+                <!--
+                <input type="text" disabled="{!v.userPermission}"
+                       onkeyup="{!c.search}" 
+                       name="basepart"
+                       class="slds-input"
+                       onmouseup="{!c.search}"
+                       id="{!'productFamilyValue' + v.Index + v.projectId}"
+                       aura:id="{!'productFamilyValue' + v.Index + v.projectId}" 
+                       value="{!v.EstimatorInstance.Product_Family__c}"  
+                       data-label="basepart"/>
+                -->
+               <div onkeyup="{! c.search }" data-name="basepart" >
+                   <lightning:input name="basepart"
+                                    value="{!v.EstimatorInstance.Product_Family__c}"
+                                    data-label="basepart"
+                                    disabled="{!v.userPermission}"
+                                    aura:id="productFamilyValue"
+                                    onchange = "{!c.search}"
+                                    type="text"
+                                    />
+               </div>
+                <lightning:buttonIcon size="medium" iconName="utility:clear" aura:id="clrproductFamilyValue"
+                                      class="slds-input__icon slds-input__icon_right slds-icon-text-default slds-hide btn-clear"
+                                      variant="bare" name="basepart" onclick="{!c.clear}"/>
+            </div>
+            <aura:if isTrue="{!!v.isValidBasePart}">
+                <span style="color: red;">Please enter valid base part</span>
+            </aura:if>	
+            <aura:if isTrue="{!!v.basePartCanProjectFlag}">
+                <span style="color: red;">Invalid part. The product cannot be added to the Estimator</span>
+            </aura:if>	
+            <aura:if isTrue="{!!v.DuplicateBasePart}">
+                <span style="color: red;">Duplicate. The base part has already been added to the Estimator</span>
+            </aura:if>	
+        </td> 
+        <!--CPN--> 
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile catalog-column" title="{!v.EstimatorInstance.Catalog_Part_Number__c}">
+            <div class="slds-hide_medium">Catalog Part Number</div>
+            <div class="slds-form-element__control slds-grow slds-input-has-icon slds-input-has-icon_left-right">
+                
+                <lightning:buttonIcon size="medium" iconName="utility:search" aura:id="myBtn"
+                                      class="slds-input__icon slds-input__icon_left slds-icon-text-default btn-search"
+                                      variant="bare" name="catalogpart" onclick="{!c.showProducts}"/>
+                
+                <!--
+                <input id="{!'productNameValues' + v.Index + v.projectId}"
+                       disabled="{!v.userPermission}" type="text" 
+                       onkeyup="{!c.search}" 
+                       name="catalogpart"
+                       onmouseup="{!c.search}"
+                       class="slds-input" 
+                       aura:id="{!'productNameValues' + v.Index + v.projectId}"  
+                       value="{!v.EstimatorInstance.Catalog_Part_Number__c}"  
+                       data-label="catalogpart"/>      
+                -->
+                <div onkeyup="{! c.search }" data-name="catalogpart" >
+                    <lightning:input name="catalogpart"
+                                     value="{!v.EstimatorInstance.Catalog_Part_Number__c}"
+                                     data-label="catalogpart"
+                                     disabled="{!v.userPermission}"
+                                     aura:id="productNameValues"
+                                     onchange = "{!c.search}"
+                                     type="text"
+                                     />
+                </div>
+                <lightning:buttonIcon size="medium" iconName="utility:clear" aura:id="clrproductNameValues"
+                                      class="slds-input__icon slds-input__icon_right slds-icon-text-default btn-clear slds-hide" 
+                                      variant="bare" name="catalogpart" onclick="{!c.clear}"/>
+            </div>    
+            <aura:if isTrue="{!!v.isValidCPN}">
+                <span style="color: red;">Please enter valid CPN</span>
+            </aura:if>	 
+            
+            <aura:if isTrue="{!!v.DuplicateCPN}">
+                <span style="color: red;">Duplicate. The product has already been added to the Estimator</span>
+            </aura:if>	
+            
+            <aura:if isTrue="{!!v.DeviceFamily}">
+                <span style="color: red;">Not a CPN. The product is a Device Family</span>
+            </aura:if>	
+            
+             <aura:if isTrue="{!!v.CanProjectFlag}">
+                <span style="color: red;">Invalid part. The product cannot be added to the Estimator</span>
+            </aura:if>	
+        </td>  
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile">
+            <div class="slds-hide_medium">BU</div>
+            &nbsp;&nbsp;
+            {!v.EstimatorInstance.BU__c}
+            &nbsp;&nbsp;
+        </td>
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile">
+            <div class="slds-hide_medium">Target Price (USD)</div>
+            <!-- ui:inputCurrency disabled="{!v.userPermission}" aura:id="TargetPrice" value="{!v.EstimatorInstance.Target_Price__c}" format=".000"  change="{!c.targetPriceChange}"/-->
+            <lightning:input disabled="{!v.userPermission}" 
+                             type="number" 
+                             aura:id="TargetPrice" 
+                             value="{!v.EstimatorInstance.Target_Price__c}" 
+                             formatter="decimal" 
+                             onchange="{!c.targetPriceChange}" 
+                             step="0.001"/>
+
+             <span  class="{!v.TargetPrice}" 
+                  style="color: red;">TargetPrice should be always greater than 0</span>
+        </td> 
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile">
+            <div class="slds-hide_medium">Qty/Board</div>
+            <!--ui:inputNumber disabled="{!v.userPermission}" aura:id="QTYBoard" value="{!v.EstimatorInstance.QTY_Board__c}" 
+                            required="true" change="{!c.QTYBoardChange}" keyup="{!c.checkQTY}" updateOn="keyup" format="#"/-->
+            <lightning:input disabled="{!v.userPermission}" 
+                             type="number" 
+                             aura:id="QTYBoard" 
+                             value="{!v.EstimatorInstance.QTY_Board__c}" 
+                             formatter="decimal" 
+                             onchange="{!c.QTYBoardChange}" 
+                             step="1"/>
+            <span  class="{!v.blankQTY}" 
+                  style="color: red;">QTY/Board should be always greater than 0</span>
+            
+        </td>
+        <td role="gridcell" class="slds-cell-wrap no-border-mobile" data-label="To Quote">
+			<div class="slds-hide_medium">Quote <lightning:helptext content="{!$Label.c.Estimator_Quote_Message}" /></div>
+            <lightning:input type="checkbox" checked="{!v.toQuote}" onchange="{!c.changedToQuote}" disabled="{!v.userPermission || v.disableToQuote || v.isBUUser}" />
+        </td>
+        <td role="gridcell" class="slds-cell-wrap slds-text-align_center" data-label="Action" >                                 
+            <lightning:button aura:id="expandIcon" variant="base" label="Additional Details" value="{!Index}" onclick="{!c.toggle}" iconName="{!v.IconNameChild}" iconPosition="right" class="{!v.toggleClass + ' expand-button'}"/>
+        </td>
+        <!-- <td role="gridcell" class="slds-cell-wrap">
+            <a onclick="{!c.removeRow}">
+                <lightning:icon variant="error" iconName="action:delete"  size="x-small"  alternativeText="icon"/>
+                <span class="slds-assistive-text">Delete Icon</span>
+            </a> 
+        </td> -->
+		
+    </tr>  
+    <!-- Estimator data row start here -->
+    <!--
+    <aura:if isTrue="{!v.isEstimatorValChanged}">
+        <tr class="slds-theme_alert-texture slds-theme_error" role="alert">
+            <td colspan="11" >
+                <div class="break-word">
+                    {!$Label.c.Estimators_AlertUnsavedChanges}
+                </div>  
+            </td>
+        </tr>
+    </aura:if>
+    -->
+    <aura:if isTrue="{!v.invalidCPNChangeErrorMsg}">
+        <tr class="slds-theme_alert-texture slds-theme_error" role="alert">
+            <td colspan="11" >
+                <div class="break-word">
+                    {!v.invalidCPNChangeErrorMsg}
+                </div>  
+            </td>
+        </tr>
+    </aura:if>
+    <aura:if isTrue="{!v.invalidStatusChangeErrorMsg}">
+        <tr class="slds-theme_alert-texture slds-theme_error" role="alert">
+            <td colspan="11" >
+                <div class="break-word">
+                    {!v.invalidStatusChangeErrorMsg}
+                </div>  
+            </td>
+        </tr>
+    </aura:if>
+    <!-- Dynamic subtable starts -->
+    <aura:if isTrue="{!v.CollapseLineItem_child}">
+        <tr class="slds-hint-parent light-bg child-row" aura:id="{!v.EstimatorInstance.Id}" id="estimatorSubTable">
+            <td colspan="11">
+                <div class="slds-grid slds-wrap slds-grid_vertical-align-center">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-6 slds-grid slds-wrap slds-grid_vertical-align-center">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-grid slds-wrap slds-grid_vertical-align-center">                            
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 text-align-responsive-LR slds-p-right_small break-word">Competitor</div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">                            
+                                <!--ui:inputSelect options = "{!v.competitorOptions}" disabled="{!v.userPermission}" aura:id="Competitor" value="{!v.EstimatorInstance.Competitor__c}"  class="slds-select control" /-->                                            
+                                <!-- <ui:inputSelect disabled="{!v.userPermission}" aura:id="Competitor" value="{!v.EstimatorInstance.Competitor__c}"  class="slds-select control" >  
+                                    <aura:iteration items="{!v.competitorvalues}" var="competitor" >    
+                                        <ui:inputSelectOption label="{!competitor}" text="{!competitor}"/>				  
+                                    </aura:iteration>
+                                </ui:inputSelect> -->
+                                
+                                <lightning:select name="Competitor" aura:id="Competitor" disabled="{!v.userPermission}" value="{!v.EstimatorInstance.Competitor__c}">
+                                    <aura:iteration items="{!v.competitorsPicklistVal}" var="optionVal">
+                                        <option text="{!optionVal.label}" value="{!optionVal.value}" selected="{!optionVal.selected}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 text-align-responsive-LR slds-p-right_small break-word">Comp Part Number</div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                                <!-- ui:inputText disabled="{!v.userPermission}" aura:id="CompPartNumber" value="{!v.EstimatorInstance.Comp_Part_Number__c}"/-->
+                                <lightning:input disabled="{!v.userPermission}" 
+                                                 type="text" 
+                                                 aura:id="CompPartNumber" 
+                                                 value="{!v.EstimatorInstance.Comp_Part_Number__c}" 
+                                                 />
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 text-align-responsive-LR slds-p-right_small break-word">Comp Price</div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                                <!-- ui:inputCurrency disabled="{!v.userPermission}" aura:id="CompPrice" value="{!v.EstimatorInstance.Comp_Price__c}" format="USD .000"/-->
+                                <lightning:input disabled="{!v.userPermission}" 
+                                                 type="number" 
+                                                 formatter="currency" step="0.001"
+                                                 aura:id="CompPrice" 
+                                                 value="{!v.EstimatorInstance.Comp_Price__c}" 
+                                                 />
+                                <div  class="{!v.CompPriceValidation + ' white-space-normal'}" style="color: red;">
+                                    Comp Price cannot be less than USD 0.000
+                                </div>
+                            </div> 
+                                                       
+                        </div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-6 slds-grid slds-wrap slds-grid_vertical-align-center">
+                        <div class="slds-col slds-size_1-of-1 slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 text-align-responsive-LR slds-p-right_small">Comments</div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                                <!--ui:inputTextArea  maxlength="1024" disabled="{!v.userPermission}" aura:id="Comments" value="{!v.EstimatorInstance.Comments__c}"/-->
+                                <lightning:textarea name="Comments" aura:id="Comments"  disabled="{!v.userPermission}"  value="{!v.EstimatorInstance.Comments__c}" maxlength="1024" />
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="slds-col slds-grid slds-wrap slds-grid_vertical-align-center">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 text-align-responsive-LR slds-p-right_small">Competitor</div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <ui:inputSelect disabled="{!v.userPermission}" aura:id="Competitor" value="{!v.EstimatorInstance.Competitor__c}"  class="slds-select control" >  
+                                <aura:iteration items="{!v.competitorvalues}" var="competitor" >    
+                                    <ui:inputSelectOption label="{!competitor}" text="{!competitor}"/>				  
+                                </aura:iteration>
+                            </ui:inputSelect>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 text-align-responsive-LR slds-p-right_small">Comp Part Number</div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <ui:inputText disabled="{!v.userPermission}" aura:id="CompPartNumber" value="{!v.EstimatorInstance.Comp_Part_Number__c}"/>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 text-align-responsive-LR slds-p-right_small">Comp Price</div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <ui:inputCurrency disabled="{!v.userPermission}" aura:id="CompPrice" value="{!v.EstimatorInstance.Comp_Price__c}" format="USD .000"/>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-grid slds-wrap slds-grid_vertical-align-center slds-m-top_x-small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 text-align-responsive-LR slds-p-right_small">Comments</div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <ui:inputTextArea disabled="{!v.userPermission}" aura:id="Comments" value="{!v.EstimatorInstance.Comments__c}"/>
+                        </div>
+                    </div> -->
+                </div>
+            </td>
+        </tr>
+    </aura:if>
+    <!-- /Dynamic subtable Ends --> 
+     <!-- Show products -->
+    <aura:if isTrue="{!v.ShowProducts}">
+        <div role="dialog" tabindex="-1" aria-labelledby="header99" class="slds-modal slds-fade-in-open slds-modal_medium">
+            <div class="{!'slds-modal__container ' + v.container}">
+                <!-- ###### MODAL BOX HEADER Part Start From Here ######-->
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closeProductsModel}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading_medium">Products</h2>                    
+                </div>
+                 
+                <!--###### MODAL BOX BODY Part Start From Here ######-->
+                <div class="slds-modal__content slds-p-around_medium" id="{!'resultScroll' + v.projectId}" onscroll="{!c.onScroll}">           
+                    <!-- QuoteLineItem list -->
+                    
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-around_x-small">
+                            <label class="{!v.familycolumn}">Product Family</label>
+                            <!-- ui:inputText aura:id="searchbox1" class="{!'slds-input search-box slds-m-top_x-small '+ v.familycolumn}" keyup="{!c.keyPressController}" value="{!v.SearchKeyWord1}" placeholder="Search Product Family" updateOn="keyup"/-->  
+                            <lightning:input name="searchbox1"
+                                             value="{!v.SearchKeyWord1}"
+                                             data-label="searchbox1"
+                                             placeholder="Search Product Family"
+                                             aura:id="searchbox1"
+                                             class="{!v.familycolumn}"
+                                             onchange = "{!c.keyPressController}"
+                                             type="text"
+                                             />
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-around_x-small">
+                            <label class="{!v.basepartcolumn}">Base Part</label>
+                            <!--ui:inputText aura:id="searchbox2" class="{!'slds-input search-box slds-m-top_x-small '+ v.basepartcolumn}" keyup="{!c.keyPressController}" value="{!v.SearchKeyWord2}" placeholder="Search Base Part" updateOn="keyup"/-->                                
+                            <lightning:input name="searchbox2"
+                                             value="{!v.SearchKeyWord2}"
+                                             data-label="searchbox2"
+                                             placeholder="Search Base Part"
+                                             aura:id="searchbox2"
+                                             class="{!v.basepartcolumn}"
+                                             onchange = "{!c.keyPressController}"
+                                             type="text"
+                                             />
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-around_x-small">
+                            <label class="{!v.catalogpartcolumn}">Catalog Part Number</label>
+                            <!--ui:inputText aura:id="searchbox3" class="{!'slds-input search-box slds-m-top_x-small '+ v.catalogpartcolumn}" keyup="{!c.keyPressController}" value="{!v.SearchKeyWord3}" placeholder="Search Catalog Part Number" updateOn="keyup"/-->
+                            <lightning:input name="searchbox3"
+                                             value="{!v.SearchKeyWord3}"
+                                             data-label="searchbox3"
+                                             placeholder="Search Base Part"
+                                             aura:id="searchbox3"
+                                             class="{!v.catalogpartcolumn}"
+                                             onchange = "{!c.keyPressController}"
+                                             type="text"
+                                             />
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-wrap slds-m-top_medium">
+                            <div class="{!v.noselection + ' slds-col slds-text-align_center slds-m-vertical_medium slds-text-heading_small'}" style="color: red;">
+                                Select a Product to add to Estimator
+                            </div>
+                            
+                            <aura:if isTrue="{!v.canProject}"> 
+                                <div class="slds-col slds-text-align_center slds-m-vertical_medium slds-text-heading_small"  style="color: red;">
+                                    {!v.canProjectProducts}
+                                </div>
+                            </aura:if>
+                    </div>
+                    <aura:if isTrue="{!v.EstimatorsProductListHandler.length > 0}"> 
+                        <aura:if isTrue="{!!v.isMobileMode}"> 
+                                <div  class="product-table slds-m-top_medium">
+                                    <lightning:datatable
+                                        columns="{! v.columns }"
+                                        data="{! v.EstimatorsProductListHandler }"
+                                        keyField="{!v.keyFieldValue}"
+                                        loadMoreOffset="{!$Label.c.EstimatorSearchQueryLimit}"
+                                        onloadmore="{! c.loadMoreProducts }"
+                                        enableInfiniteLoading = "true"
+                                        minColumnWidth="100"
+                                        maxColumnWidth = "3000"
+                                        maxRowSelection = "1"
+                                        onrowselection="{! c.productSelected }"
+                                        />
+                                    <div class="product-table-loader" aura:id="loading">
+                                        <div class="slds-col slds-text-align_center">
+                                            <div class="demo-only demo-only demo-only_viewport demo--inverse">
+                                                <div role="status" class="slds-spinner slds-spinner_medium slds-spinner_brand">
+                                                    <span class="slds-assistive-text">Loading</span>
+                                                    <div class="slds-spinner__dot-a"></div>
+                                                    <div class="slds-spinner__dot-b"></div>
+                                                </div>
+                                            </div> 
+                                            <!--<img class="imgclass" src="/resource/loading" />-->
+                                        </div>  
+                                    </div>
+                                </div>                                
+                                <aura:set attribute="else">
+                                    <table class="slds-table slds-table_bordered responsiveTable">
+                                        <thead class="estimator-popup-header">
+                                            <tr class="slds-text-title_caps slds-line-height_reset"> 
+                                                <th scope="col" class="slds-border_left">
+                                                    
+                                                </th>
+                                                <th scope="col" class="{!v.familycolumn}">
+                                                    <div class="slds-truncate" title="Product Family">Product Family</div>
+                                                </th>
+                                                <th scope="col" class="{!v.basepartcolumn}">
+                                                    <div class="slds-truncate" title="Base Part">Base Part</div>
+                                                </th>         
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="Catalog Part Number">Catalog Part Number</div>
+                                                </th>   
+                                                <th scope="col" class="{!v.basepartonlycolumn}">
+                                                    <div class="slds-truncate" title="Device Family Max">Device Family Max</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.basepartonlycolumn}">
+                                                    <div class="slds-truncate" title="Device Family Min">Device Family Min</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="RSMMIN">RSMMIN</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="DC">DC</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="1-4">1-4</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="5-9">5-9</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="10-24">10-24</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="25-49">25-49</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="50-99">50-99</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="100-249">100-249</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="250-499">250-499</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="500-999">500-999</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="1k-4999">1k-4999</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="5k-999">5k-999</div>
+                                                </th> 
+                                                <th scope="col" class="{!v.catalogpartcolumn}">
+                                                    <div class="slds-truncate" title="10k-UP">10k-UP</div>
+                                                </th>  
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration items="{!v.EstimatorsProductListHandler}" var="item">
+                                                <tr class="slds-hint-parent">    
+                                                    <td class="slds-border_left noBefore">
+                                                        <ui:inputRadio name="Product" text="{!item}" change="{!c.onProductSelect}"/>
+                                                    </td>
+                                                    <td class="{!v.familycolumn + ' no-border-mobile'}" data-td="Product Family">
+                                                        <span class="slds-truncate">                                                   
+                                                            {!item.DeviceFamilySubCategory}
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.basepartcolumn + ' no-border-mobile'}" data-td="Base Part">
+                                                        <span class="slds-truncate">                                                   
+                                                            {!item.Family}
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="Catalog Part Number">
+                                                        <span class="slds-truncate">
+                                                            {!item.Name}
+                                                        </span>
+                                                    </td>        
+                                                    <td class="{!v.basepartonlycolumn + ' no-border-mobile'}" data-td="Device Family Max">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.DeviceFamilyMax}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.basepartonlycolumn + ' no-border-mobile'}" data-td="Device Family Min">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.DeviceFamilyMin}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="RSMMIN">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.RsmMin}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="DC">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.DC}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="1-4">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X1_4}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="4-9">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X4_9}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="10-24">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X10_24}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="25-49">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X25_49}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="50-99">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X50_99}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="100-249">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X100_249}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="250-499">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X250_499}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="500-999">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X500_999}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="1k-4999">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X1k_4999}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="5k-999">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X5k_9999}" maximumFractionDigits="3"/>                                                            
+                                                        </span>
+                                                    </td>
+                                                    <td class="{!v.catalogpartcolumn + ' no-border-mobile'}" data-td="10k-UP">
+                                                        <span class="slds-truncate">
+                                                            <lightning:formattedNumber value="{!item.X10k_UP}" maximumFractionDigits="3"/>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration> 
+                                        </tbody>
+                                    </table>
+                                    <div class="slds-col slds-text-align_center" aura:id="loading">
+                                        <img class="imgclass" src="/resource/loading" /> 
+                                    </div>    
+                                </aura:set>
+                            </aura:if>
+                        <aura:set attribute="else">
+                            <div class="slds-col slds-text-align_center slds-m-vertical_medium slds-text-heading_small">
+                                No Product Match Found
+                            </div>
+                        </aura:set>
+                    </aura:if>                 
+                </div>  
+                <div class="slds-modal__footer">
+                    <div class="slds-button__icon_right slds-float_right ">                        
+                        <lightning:button variant="brand" aura:id="addToEstimator" disabled="true" label="Add to Estimator" onclick="{!c.addProductToEstimator}"/>
+                        <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeProductsModel}"/>
+                    </div>
+                </div>
+            </div>
+        </div>      
+        <div class="slds-backdrop slds-backdrop_open"></div>    
+    </aura:if>
+    <aura:if isTrue="{!v.showWarningMessage}">
+    <div class="slds-m-around_xx-large">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                            <lightning:icon iconName="utility:warning" variant="warning" size="medium"/>
+                            Warning
+                        </h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-m-around_medium slds-text-align_left">
+                            <p>
+                               {!v.warningMsg}          
+                            </p>
+                        </div> 
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral" 
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModel }"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+         </div>
+    </aura:if>
+     <!--<aura:if isTrue="{!v.canProject}">
+    <div class="slds-m-around_xx-large">
+        
+        <lightning:button variant="brand"
+                          label=""
+                          title=""
+                          onclick="{! c.openModel}" />
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{! c.closeModel }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Warning</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-box slds-m-around_medium">
+                            <p> <lightning:icon iconName="utility:warning" style="width: 15px;"/>  &nbsp; &nbsp; &nbsp;
+                               {!v.canProjectProducts}          
+                            </p>
+                        </div> 
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button variant="neutral" 
+                                          label="Close"
+                                          title="Close"
+                                          onclick="{! c.closeModel }"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+         </div>
+    </aura:if>-->
+</aura:component>
