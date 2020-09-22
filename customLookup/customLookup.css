@@ -1,0 +1,37 @@
+.THIS .leftPaddingClass {
+    padding-left: 2rem;
+}
+ 
+.THIS .pillSize{
+    width:100%;
+    display:flow-root !important;
+}
+
+.THIS .search-container{
+    max-height: 600px !important;
+}
+
+.THIS .slds-modal__container{
+    max-width: 60rem !important;
+    width:60% !important; 
+}
+.THIS .slds-combobox__input-entity-icon{
+    position:absolute;
+    top:18px;
+}
+.THIS .slds-icon-utility-search{
+    position:absolute;
+    top:18px;
+}
+.THIS .search-icon{
+    top : 15px;
+}
+.THIS .search-placeholder{
+    margin-left: 10px;
+}
+.THIS .slds-pill__remove{
+    float:right;
+}
+.THIS .pill-icon{
+    float:left;
+}
