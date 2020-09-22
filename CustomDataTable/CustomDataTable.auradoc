@@ -1,0 +1,120 @@
+<aura:documentation>
+    <aura:description>
+        <h2>Basic format used in GrowthPlanAnalysis component</h2>
+        <pre>
+            <code class="language-markup">
+                &lt;c:CustomDataTable aura:id="gp-datatable"                               
+                enableRowLevelSelect="TRUE" 
+                columns="{!v.columns}" 
+                data="{!v.growthDrivers}"
+                filters=""
+                enableSorting="TRUE"
+                enableFilters="TRUE"
+                mode = "{!v.mode}"
+                defaultFilters = "[]"/>      
+            </code>
+        </pre>
+        <h1>Below are the required parameters for this component</h1>
+        <ul>
+            <li>data</li>
+            <li>columns</li>
+            <li>filters</li>    
+        </ul>
+        <h4>Column format</h4>
+        
+        <table>
+            <tr>
+                <th>Property</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>label</td>
+                <td>string</td>
+                <td>Column label to be displayed in custom datatable</td>
+                <td>label: 'Id'</td>
+            </tr>
+            <tr>
+                <td>fieldName</td>
+                <td>string</td>
+                <td>The API name of the field to be displayed </td>
+                <td>fieldName: 'Growth_Plan__c'</td>
+            </tr>
+            <tr>
+                <td>type</td>
+                <td>string</td>
+                <td>Type of the data that is displayed. Supported types - textarea, picklist, currency, image, link, hidden.</td>
+                <td>type: 'textarea'</td>
+            </tr>
+            <tr>
+                <td>editable</td>
+                <td>boolean</td>
+                <td>Set True if the column data is editable else set false</td>
+                <td>editable: true</td>
+            </tr>
+            <tr>
+                <td>sortable</td>
+                <td>boolean</td>
+                <td>Set True if the column is sortable. Requires 'enableSorting' parameter to set to True at Component instance reference.</td>
+                <td>sortable: false</td>
+            </tr>
+            <tr>
+                <td>placeholder</td>
+                <td>String</td>
+                <td>Placeholder text to be displayed in the control when it is empty</td>
+                <td>placeholder: 'Select'</td>
+            </tr>
+            <tr>
+                <td>changeEventRequired</td>
+                <td>boolean</td>
+                <td>When set to true notifies the parent component everytime the data is modified.</td>
+                <td>changeEventRequired : true</td>
+            </tr>
+            <tr>
+                <td>isRestricted</td>
+                <td>boolean</td>
+                <td>Set to columns of picklist type. When set to 'FALSE', the value in the column will be verified among the available options. If the column data is not available part of the
+                options, it will added to the options list and sorted</td>
+                <td>isRestricted : true</td>
+            </tr>
+        </table>
+        <h4>Other specifications</h4>
+        Below are the specifications of the column data based on its type
+        <table>
+            <tr>
+                <th>Type</th>
+                <th>Attributes</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>picklist</td>
+                <td>options: []</td>
+                <td>Options to be displayed in the picklist</td>
+                <td>options: ['short','short/medium','medium','medium/long','long']</td>
+            </tr>
+             <tr>
+                <td>picklist</td>
+                <td>sortingOptions: []</td>
+                <td>Provides flexibility to sort a column based on a custom order.</td>
+                <td>sortingOptions:{type:'custom',order:['short','short/medium','medium','medium/long','long']}</td>
+            </tr>
+             <tr>
+                <td>tooltip</td>
+                <td>sortingOptions: []</td>
+                <td>Provides flexibility to add a field's value as a tooltip for the data</td>
+                <td>tooltip:{type:'fieldreference',fieldname:'Growth_Strategy__r.Strategy_Statement__c'}</td>
+            </tr>
+             <tr>
+                <td>link</td>
+                <td>options: []</td>
+                <td>Provides flexibility to link to a particular record in salesforce.</td>
+                <td>options:{type:'sobject',alternativeText:'None',label:'Growth_Strategy__r.Name',recordId:'Growth_Strategy__c'}</td>
+            </tr>
+        </table>
+    </aura:description>
+    <aura:example name="ExampleName" ref="c:GrowthPlanAnalysis" label="Growth Plan Analysis">
+        Example Description
+    </aura:example>
+</aura:documentation>

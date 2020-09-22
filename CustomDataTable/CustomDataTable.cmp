@@ -1,0 +1,262 @@
+<!--
+********************************************************************************************************************************
+* Name         		  : CustomDataTable
+* Description         : This Component is to render the Growth Driver tabular data in Growth Plan.
+  @author(MST SOLUTIONS)
+ 
+* Modification Log
+	Developer           Date         Description
+********************************************************************************************************************************
+* MST Solutions     09/17/2020     US-10225, help text update
+********************************************************************************************************************************
+-->
+<aura:component implements="flexipage:availableForAllPageTypes,lightning:isUrlAddressable,force:hasRecordId,force:appHostable">
+    
+    <!-- ***** Attributes ***** -->    
+    <aura:attribute name="columns" type="List" default="[]" description="Required attribute. Data table column specification information like label, datatype, editable, sortable"/>
+    <aura:attribute name="data" type="List" default="[]" description="Required attribute. Data to be rendered. Supplied by parent component"/>
+    <aura:attribute name="dataCopy" type="List" default="[]" description="A copy of the original data set at the time of first initialization. 
+                                                                          Update everytime data attribute is saved. Used to detect change in data attribute"/>
+    <aura:attribute name="enableFilters" type="Boolean" default="false" description="Setting to toggle on/off the expandable search feature"/>
+    <aura:attribute name="enableSorting" type="Boolean" default="false" description="Setting to fully turn on/off the sorting feature in datatable"/> 
+    <aura:attribute name="enableRowLevelSelect" type="boolean" default="false" description="Setting to turn on/off the visibility of row level checkboxes in datatable"/>
+    <aura:attribute name="enableSelectAll" type="boolean" default="false" description="Option to turn on/off the overall select at the table header"/>
+    <aura:attribute name="filters" type="List" default="[]" description="All filters to be applied for this datatable"/>
+    <aura:attribute name="defaultFilters" type="List" default="[]" description="Default filter criteria. Applied everytime the component is initialized"/>
+    <aura:attribute name="filterCriteria" type="List" default="[]" description="Filter criteria applied by a user in the component"/>
+    <aura:attribute name="filterCriteriaTemp" type="List" default="[]" description="A copy of the filterCriteria attribute. To be used to reapply the previously applied filter criteria 
+                                                                                    when user modifies the existing filter criteria and click's cancel"/>   
+    <aura:attribute name="formattedData" type="Map" default="{}" description="A combination of data and column attribute specification to iterate through the datatable"/>   
+    <aura:attribute name="chngEvntRequrdFlds" type="String[]" default="[]" description="A collection to specifiy the list of columns that requires data change event to be triggered.
+                                                                                        The parent component will be notified when any of these column data is modified"/>   
+    <aura:attribute name="numericalDataTypes" type="String[]" default="['currency','number']" description="Commonly used column datatypes of numerical type. To be used at the time of applying sorting"/>  
+    <aura:attribute name="columnData" type="Map" default="{}" description="Column attribute updated to a format of collection having fieldname as key"/>   
+    <aura:attribute name="mode" type="string" default="view" description="Setting to toggle on/off the read/edit mode in datatable"/> 
+    <aura:attribute name="isDataUpdateRequired" type="Boolean" default="true" description="Flag used to programmatically control the change event set to data attribute"/> 
+    <aura:attribute name="dataKeys" type="string[]" default="[]" description="A collection of fieldnames"/> 
+    <aura:attribute name="tableCSS" type="string" default="" description="Attribute to update the table behaviour dynamically. The custom datatable is set to scroll vertically once it grows greater than 450px."/> 
+    
+    <!-- ***** Handlers ***** -->
+    <aura:handler name="selectChange" event="c:SelectChange" action="{!c.handleMultiSelectChange}" description="Handler to detect the change in multiselect component available under filter section"/>
+    <aura:handler name="change" value="{!v.mode}" action="{!c.modeChanged}" description="Change handler - Invoked when mode is toggled between read and edit"/>
+    <aura:handler name="change" value="{!v.data}" action="{!c.dataChanged}" description="Change handler - Everytime a change is made to data attribute from data attribute update the formatted data and datacopy attributes"/>
+    
+    <!-- ***** Events ***** -->
+    <aura:registerEvent name="CustomDataTableRowSelect" type="c:CustomDataTableRowSelect" description="Component Event - To notify parent component that a row is selected"/>
+    <aura:registerEvent name="CustomDataTableChangeEvent" type="c:CustomDataTableChangeEvent" description="Component Event - To notify the parent component that a filter section is expanded/closed"/>
+    
+    <!-- ***** Methods ***** -->
+    <aura:method name="toggleFilter" action="{!c.toggleFilter}"
+                 description="The method is to toggle (expand/collapse) the filter section in the datatable component from parent components"  access="PUBLIC">
+    </aura:method>
+    
+    <aura:method name="clearAllRows" action="{!c.onClearAll}"
+                 description="Clear all the selected rows"  access="PUBLIC">
+    </aura:method>    
+    
+    <aura:method name="disableRowCheckBoxes" action="{!c.disableRowCheckBoxes}"
+                 description="Disable a particular row"  access="PUBLIC">
+        <aura:attribute name="rowIndexes" type="string[]" default="" description="Row index of list of all rows to be disabled"/>
+    </aura:method> 
+    
+    <aura:method name="dataTableInit" action="{!c.initializeDataTable}"
+                 description="This method is to initialize the component"  access="PUBLIC">
+    </aura:method>
+    
+    <aura:method name="dataTableReInit" action="{!c.reInitializeDataTable}"
+                 description="This method is to reinitialize the component"  access="PUBLIC">
+    </aura:method>
+    
+    <aura:method name="reApplyFilter" action="{!c.reApplyFilter}"
+                 description="This method is to update the default filter criteria set by parent component"  access="PUBLIC">
+    </aura:method>
+    
+    <aura:method name="initializeRow" action="{!c.initializeRow}"
+                 description="This method is to reinitialize a particular row"  access="PUBLIC">
+        <aura:attribute name="rowIndex" type="integer" default="Specify the index of the row that needs to be initialized"/>
+    </aura:method>
+    
+    <aura:method name="updateValidationStatus" action="{!c.updateValidationStatus}"
+                 description="Update the data validation status in rows"  access="PUBLIC">
+        <aura:attribute name="rowIndex" type="integer" default="" description="Index of the row to which the validation status need to be applied"/>
+        <aura:attribute name="fieldName" type="string" default="" description="Column to which the validation status is applicable"/>
+        <aura:attribute name="errormessage" type="string" default="" description="Message to be displayed"/>
+    </aura:method> 
+    
+    <aura:method name="hideAllErrors" action="{!c.hideAllErrors}"
+                 description="Hide error messages from all the rows"  access="PUBLIC">        
+    </aura:method> 
+     
+    <!-- Component changes -->
+    <div class="slds-grid" style="cdt-container">
+        <div class="gd-table">           
+            <div class="slds-grid slds-scrollable--x">        
+                <table aura:id="table-section" id="{!globalId+'_table-section'}"
+                       class="{!v.tableCSS + ' slds-col slds-table slds-table_bordered slds-table_striped slds-border_right slds-border_left slds-m-top_small'}">
+                    <thead>              
+                        <tr class="slds-line-height_reset data-table-header slds-border_bottom">
+                            <aura:if isTrue="{!(v.mode == 'view')}">
+                                <th scope="col" class="slds-border_bottom">       
+                                    <aura:if isTrue="{!v.enableSelectAll}">                            
+                                        <div class="slds-truncate">
+                                            <lightning:input type="checkbox"  name="selectAll" onclick="{!c.onSelectAll}"/>
+                                        </div>
+                                    </aura:if>
+                                </th>                    
+                            </aura:if>
+                            
+                            <aura:iteration items="{!v.columns}" var="col" indexVar="index">                     
+                                <aura:if isTrue="{!col.type != 'hidden'}">
+                                    <th scope="col table-header" class="dtHeader dtHead slds-border_bottom" onmouseover="{!c.onmouseover}" id="{!globalId+'-'+col.fieldName}" onmouseleave="{!c.onmouseleave}" data-name="{!col.fieldName}" data-sortselected="{! or(col.sortbydefault == 'asc',col.sortbydefault == 'desc')? true:false}"> 
+                                        <div>
+                                            <span class="slds-form-element__label">{!col.label}</span>
+                                            <aura:if isTrue="{!not(empty(col.helptext))}">
+                                                <lightning:helptext content= "{!col.helptext}"/>
+                                            </aura:if>
+                                            
+                                            
+                                            <div class="sort-icons">
+                                                <aura:if isTrue="{! and(v.enableSorting, col.sortable)}">                                
+                                                    <span onclick="{!c.onSort}" id="{!globalId+'-asc-'+col.fieldName}" class="{!col.sortbydefault == 'desc'?'':'slds-hide'}" data-name="{!col.type+'-'+col.fieldName}" data-sortType="{!col.sortingOptions.type}"
+                                                          data-sortOptions="{!col.sortingOptions.order}">
+                                                        <lightning:buttonIcon size="medium" iconName="utility:arrowdown" 
+                                                                              class="slds-input__icon slds-input__icon_left slds-icon-text-default"
+                                                                              variant="bare"/>                                      
+                                                        
+                                                    </span>
+                                                    <span onclick="{!c.onSort}" id="{!globalId+'-desc-'+col.fieldName}" class="{!col.sortbydefault == 'asc'?'':'slds-hide'}" data-name="{!col.type+'-'+col.fieldName}" data-sortType="{!col.sortingOptions.type}"
+                                                          data-sortOptions="{!col.sortingOptions.order}">
+                                                        <lightning:buttonIcon size="medium" iconName="utility:arrowup"
+                                                                              class="slds-input__icon slds-input__icon_left slds-icon-text-default"
+                                                                              variant="bare"/>
+                                                    </span> 
+                                                    
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                    </th>
+                                </aura:if>
+                            </aura:iteration>                    
+                        </tr>
+                    </thead>
+                    <tbody  id="{!globalId + '_table-body'}">                        
+                        <aura:iteration items="{!v.formattedData}" var="tdData" indexVar = "index">                           
+                            <c:CustomDataTableRow 
+                                                  enableRowLevelSelect="true"                                      
+                                                  data ="{!v.data}"       
+                                                  formattedData = "{!tdData}"
+                                                  columnData ="{!v.columnData}"
+                                                  aura:id="dataRow" 
+                                                  index="{!index}"                                                                                   
+                                                  mode="{!v.mode}"
+                                                  dataKeys = "{!v.dataKeys}"
+                                                  chngEvntRequrdFlds= "{!v.chngEvntRequrdFlds}"/>                                           
+                        </aura:iteration> 
+                        <tr aura:id="norecords" class="slds-hide"><td colspan="20" style="text-align:center">No results found matching the filter criteria</td></tr>
+                    </tbody>           
+                </table>  
+                
+                <!-- ************************************* Filters section ******************************* -->
+                <aura:if isTrue="{!v.enableFilters}">                    
+                    <div class="slds-box slds-col slds-size_3-of-12 slds-m-top_small slds-m-left_xx-small slds-hide slds-border_left slds-border_right slds-border_bottom slds-border_top " aura:id='filterTab'>
+                        <div>                            
+                            <div class="slds-p-bottom_x-small slds-clearfix slds-border_bottom">
+                                <div class="slds-float_left"><lightning:button label="Cancel" variant="neutral" onclick="{!c.cancelFilter}"/></div>
+                                <div class="slds-float_left slds-p-left_xx-small"><lightning:button label="Reset" variant="neutral" onclick="{!c.ClearFilters}"/></div>
+                                <div class="slds-float_right"><lightning:button label="Apply" variant="brand" onclick="{!c.applyFilter}"/></div>                    
+                            </div>
+                           
+                            <div class="filter-container">                                                            
+                                <aura:iteration items="{!v.filters}" var="filter" indexVar = "index"> 
+                                    <aura:if isTrue="{!filter.type == 'picklist'}">
+                                        <div class="slds-m-top_small filter-content-70">  
+                                            <span data-name ="{!filter.fieldName}"  data-label ="{!filter.label}"  data-value="{!filter.value}" data-operation="{!filter.operation}" onchange="{!c.onComboChange}">
+                                                <lightning:combobox 
+                                                                    label="{!filter.label}"
+                                                                    placeholder="{!filter.placeholder}" 
+                                                                    options="{!filter.options}" 
+                                                                    value="{!filter.value}"
+                                                                    />
+                                            </span>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!filter.type == 'multipicklist'}">
+                                        <div class="slds-m-top_small filter-content-70">
+                                            {!filter.label}
+                                            <c:MultiSelectDropDownPicklist aura:id="multipick-filter" 
+                                                                           options="{!filter.options}" 
+                                                                           selectChange="{!c.handleMultiSelectChange}" 
+                                                                           selectedItems="{!filter.value}" 
+                                                                           fieldLabel="{!filter.label}" 
+                                                                           fieldName="{!filter.fieldName}"/>    
+                                        </div>
+                                    </aura:if> 
+                                    <aura:if isTrue="{!filter.type == 'date range'}">
+                                        <div class="slds-m-top_small">
+                                            {!filter.label} 
+                                            <div class="slds-clearfix">                                              
+                                                <div class="slds-float_left filter-date">
+                                                    <span data-name="startDate" data-label="{!filter.label}" data-fieldName="{!filter.fieldName}" data-value="{!filter.startDate}" onchange="{!c.onDateFilterChange}">
+                                                        <lightning:input type="date" name="startDate" placeholder="Start Date" value="{!filter.startDate}" />
+                                                    </span>  
+                                                </div>
+                                                <div class="slds-float_right  filter-date" >
+                                                    <span data-name="endDate" data-label="{!filter.label}" data-fieldName="{!filter.fieldName}" data-value="{!filter.endDate}" onchange="{!c.onDateFilterChange}">                                                
+                                                        <lightning:input type="date" name="endDate" placeholder="End Date" value="{!filter.endDate}"/>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span style="color:red" id="{!filter.fieldName}"></span>
+                                        </div>
+                                    </aura:if>
+                                </aura:iteration>                                      
+                            </div>  
+                            <aura:if isTrue="{! or(v.data.length > 1)}">
+                                <div class="slds-m-top_small slds-float_left slds-m-bottom_x-small" style="width:100%">                 
+                                    <aura:if isTrue="{! and(v.filterCriteria.length > 0)}">
+                                        <div class="slds-clearfix slds-p-bottom_x-small filter-header">
+                                            Filters Applied                       
+                                        </div> 
+                                    </aura:if>
+                                    <aura:iteration items="{!v.filterCriteria}" var="criteria" indexVar="key">
+                                        <span class="slds-m-right_xx-small" style="font-weight:bold">{!criteria.fieldLabel}:</span>   
+                                        <aura:iteration items="{!criteria.selectedValues}" var="crt" indexVar="index">
+                                            <aura:if isTrue="{! and(criteria.type != 'date range',greaterthan(criteria.selectedValues.length, 0))}">
+                                                {!crt}   
+                                                
+                                                <aura:if isTrue="{! notequals(criteria.selectedValues.length, index+1)}">                                                
+                                                    ,
+                                                    <aura:set attribute="else">
+                                                        <br/>
+                                                    </aura:set>
+                                                </aura:if>    
+                                                <aura:set attribute="else">
+                                                    {!crt}   
+                                                    
+                                                </aura:set>
+                                            </aura:if>  
+                                            
+                                        </aura:iteration>    
+                                        <aura:if isTrue="{! equals(criteria.type,'date range')}">
+                                            <br/>
+                                            <aura:if isTrue="{! notequals(criteria.selectedValues.startDate,'')}">
+                                                Start Date:                                            
+                                                <lightning:formattedDateTime value="{!criteria.selectedValues.startDate}"/>                                            
+                                            </aura:if>
+                                            <br/>
+                                            <aura:if isTrue="{! notequals(criteria.selectedValues.endDate,'')}">
+                                                End Date:                                            
+                                                <lightning:formattedDateTime value="{!criteria.selectedValues.endDate}"/>                                            
+                                            </aura:if>
+                                            <br/>
+                                        </aura:if>     
+                                    </aura:iteration>
+                                </div>  
+                            </aura:if>
+                        </div> 
+                    </div>                    
+                </aura:if>
+            </div>           
+        </div>
+    </div>
+</aura:component>

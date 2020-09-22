@@ -1,0 +1,107 @@
+.THIS.cdt-container{
+    overflow-x: auto;
+}
+.THIS .custom-data-table{
+    table-layout: fixed;
+}
+.THIS .data-table-header{
+    background-color: #eeeef7;
+}
+.THIS .filter-clear-all{
+    z-index: 1;
+    position: relative;    
+    color: RoyalBlue;
+    cursor:pointer;
+}
+
+.THIS .table-no-records{
+    min-height: 0px !important;
+}
+/*
+.THIS table::-webkit-scrollbar,
+.THIS tr .slds-dropdown-trigger_click .slds-dropdown::-webkit-scrollbar
+{
+width: 12px;
+background-color: #F5F5F5;
+}
+.THIS table::-webkit-scrollbar-thumb,
+.THIS tr .slds-dropdown-trigger_click .slds-dropdown::-webkit-scrollbar-thumb
+{
+border-radius: 10px;
+-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+background-color: #ecebea;;
+}*/
+.THIS .filter-header{
+    background-color: #8c8c8c;
+    padding: 5px;
+    color: white;
+    width:100%;
+}
+
+.THIS .filter-container{
+    width:100%;
+}
+.THIS .filter-content-70{
+    width:70%;
+}
+.THIS .filter-content-50{
+    width:50%;
+}
+.THIS .filter-date{
+    width:48%;
+    margin-top:-12px;
+}
+.THIS .sort-icons{
+    display: inline-block;
+    min-width: 17px;    
+}
+.THIS table tr td:nth-child(2) p{
+    min-width:230px;
+    white-space: normal;   
+}
+.THIS table tr td:nth-child(3) p{    
+    white-space: normal;   
+}
+.THIS .cCustomDataTableRowItem .slds-form-element__icon button{
+    margin-top: -3px;
+    margin-left: 5px;
+}
+/** Table Header Fixed and Table Scroll **/
+.THIS .ct-table-fixed{
+    overflow-y: scroll;
+    display: block;
+    min-height: 300px;
+    max-height:400px;
+}
+.THIS .ct-table-fixed th{
+    position: sticky;
+    top: 0;
+    width: 3%;
+    z-index: 99;
+}
+
+/** End Table Header Fixed and Table Scroll **/
+/**
+.THIS tr:last-child .slds-combobox{
+    position:relative;
+}
+.THIS .slds-combobox_container .slds-dropdown{
+    position:absolute;
+}
+.THIS .slds-dropdown-trigger .slds-dropdown{
+    top: unset;
+}
+.THIS tr:nth-child(1) .slds-dropdown-trigger_click .slds-dropdown,
+.THIS tr:nth-child(2) .slds-dropdown-trigger_click .slds-dropdown{
+    position:absolute;
+    z-index: 9;
+    top:100%;
+    bottom:unset;
+}
+.THIS tr .slds-dropdown-trigger_click .slds-dropdown
+{
+    position: absolute;
+    bottom:100%;
+    z-index: 999;
+}
+**/
