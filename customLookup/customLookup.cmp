@@ -1,0 +1,147 @@
+<!--
+********************************************************************************************************************************
+* Name         		  : customLookup
+* Description         : This Component is a resuable custom solution to display lookup in lightning components
+  @author(MST SOLUTIONS)
+ 
+* Modification Log
+	Developer           Date         Description
+********************************************************************************************************************************
+*   MST Solutions       5/29/2019    CMPS-4434 - Component updated to show a advanced search popup that shows more records 
+*   MST Solutions       8/01/2019    CMPS-4961 - Component updated to retrieve records that contains the search keyword
+*   MST Solutions       8/01/2019    CMPS-4952 - Apply filter to purchasing customer lookup to show only compass accounts
+*   MST Solutions       8/28/2019    CMPS-5227   Mobile Issue
+*   MST Solutions       03/17/2020   US-8207     Custom lookup multi select
+*   MST Solutions       07/28/2020   Bug-9399  - Quote line item number is not visible in the transfer process
+*   MST Solutions       09/18/2020   Bug-10349 - UserName is not aligned left
+********************************************************************************************************************************
+-->
+<aura:component controller="customLookUpController" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <!--declare attributes--> 
+    <aura:attribute name="selectedRecord" type="sObject"  description="Use,for store SELECTED sObject Record"/>
+    <aura:attribute name="listOfSearchRecords" type="List" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="SearchKeyWord" type="string" default =''/>
+    <aura:attribute name="advancedSearch" type="Boolean" default="false"/>
+    <aura:attribute name="showSearch" type="Boolean" default="false"/>
+    <aura:attribute name="defaultSearchResultOn" type="Boolean" default="true"/>
+    <aura:attribute name="objectAPIName" type="string" default=""/>
+    <aura:attribute name="fieldAPIName" type="string" default="Name"/>    
+    <aura:attribute name="IconName" type="string" default=""/>
+    <aura:attribute name="label" type="string" default=""/>
+    <aura:attribute name="labelCSS" type="string" default="slds-form-element__label"/>
+    <aura:attribute name="Type" type="String" default=""/>
+    <aura:attribute name="additionalField" type="String" default="none"/>
+    <aura:attribute name="additionalFieldLabel" type="String" default="none"/>
+	<aura:attribute name = "mpAcc" 			  	type = "String"   description = "Account Id"/>
+    <aura:attribute name = "mpPro" 			  	type = "String"   description = "ProjectId"/> 
+    <aura:attribute name = "mpId" 			  	type = "String"   description = "meeting Planner Id" />
+    <aura:attribute name="Message" type="String" default=""/>
+    <aura:attribute name="placeholder" type="String" default="Search"/>
+    <aura:attribute name="offset" type="Integer" default="0"/>
+    <aura:attribute name="filters" type="Map" default=""/>
+    <aura:attribute name="readonly" type="Boolean" default="false"/>
+    <aura:attribute name="helptext" type="String" default=""/>
+    <aura:attribute name="inputClass" type="String" default=""/>
+    <aura:attribute name="userLicense" type="String[]" default=""/> 
+    <aura:attribute name="multiSelect" type="Boolean" default="FALSE"/>     
+    <aura:attribute name="lstSelectedRecords" type="sObject[]" default="[]" description="Use,for store SELECTED sObject Records"/>
+    <aura:attribute name="excludeRecords" type="sObject[]" default="[]"/>
+    <aura:registerEvent name="HandleLookupSelection" type="c:HandleLookupSelection"/>
+    <aura:registerEvent name="CustomLookupFocus" type="c:CustomLookupFocus"/>
+	<aura:registerEvent name="selectChange" type="c:SelectChange" />
+    <aura:handler name = "init" value = "{!this}" action = "{!c.doInit}"/>
+    <aura:method name="reInit" action="{!c.doInit}"  description="Allows the lookup to be reinitalized">  
+    </aura:method>
+    <!--declare events hendlers-->  
+    <aura:handler name="oSelectedRecordEvent" event="c:selectedsObjectRecordEvent" action="{!c.handleComponentEvent}"/>
+    <!-- Event added to capture the selection from advanced lookup -->
+    <aura:handler name="customLookupAdvancedSearchSelect" event="c:customLookupAdvancedSearchSelect" action="{!c.closeSearch}"/>
+ 
+    <div aura:id="searchRes" id="{!globalId+'_clookupinput'}" class="slds-form-element slds-lookup slds-is-close" data-select="single">
+        <label class="{!v.labelCSS}" for="lookup-348">{!v.label}</label>
+        <aura:if isTrue="{!notequals(v.helptext, '')}">
+        <lightning:helptext
+                        content="{!v.helptext}"
+                        iconName="utility:info"
+                    />
+        </aura:if>
+        <!--This part is for display search bar for lookup-->  
+        <div class="slds-form-element__control">
+            
+            <div class="slds-input-has-icon slds-input-has-icon--right">
+              <lightning:icon class="slds-input__icon slds-show" iconName="utility:search" size="x-small" alternativeText="search" aura:id="searchicon"/> 
+                <!-- This markup is for when an record is selected -->
+                <div aura:id="lookup-pill" class="slds-pill-container slds-hide">
+                     <lightning:pill class="pillSize" aura:id="pill" label="{!v.selectedRecord.Name}" name="{!v.selectedRecord.Name}" onremove="{! c.clear }">
+                          <aura:set attribute="media">
+                             <lightning:icon class="pill-icon" iconName="{!v.IconName}" size="x-small" alternativeText="{!v.IconName}"/>
+                          </aura:set>
+                      </lightning:pill> 
+                </div>
+                <div aura:id="lookupField" class="slds-show">
+                    <span class="slds-icon_container  slds-combobox__input-entity-icon" title="record">
+                        <lightning:icon class="slds-icon slds-icon_small slds-icon-text-default" iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                        <span class="slds-assistive-text"></span>
+                    </span>
+                    <ui:inputText click="{!c.onfocus}" updateOn="keyup" keyup="{!c.keyPressController}" class="{!'slds-lookup__search-input slds-input leftPaddingClass ' + v.inputClass}"  value="{!v.SearchKeyWord}" placeholder="{!v.placeholder}" disabled="{!v.readonly}"/>
+                </div>   
+                 <aura:iteration items="{!v.lstSelectedRecords}" var="sr">
+                        <lightning:pill class="slds-m-around_xx-small" label="{!sr.Name}" name="{!sr.Id}" onremove="{! c.pillClear }">
+                            <aura:set attribute="media">
+                                <lightning:icon iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                            </aura:set>
+                        </lightning:pill>
+                    </aura:iteration>
+            </div>
+        </div>
+        
+        <!--This part is for Display typehead lookup result List-->  
+        <!-- style="min-height:40px;margin-top:0px !important" -->
+        <ul  class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid slds-lookup__menu slds" role="listbox">
+            <lightning:spinner class="slds-hide" variant="brand" size="small" aura:id="mySpinner"/>
+            <center> {!v.Message}</center>
+           <aura:if isTrue="{! and(v.advancedSearch, v.SearchKeyWord)}">
+            <li role="presentation" class="slds-listbox__item" onclick="{!c.showAdvancedSearch}">
+                <span id="listbox-option-unique-id-01" class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                    <span class="slds-media__figure">
+                        <span class="slds-icon_container" >
+                            <lightning:icon iconName="utility:search" class="slds-icon slds-icon_small search-icon" size="xx-small" alternativeText="icon"/>
+                      	</span>
+                    </span>    
+                    <span class="slds-media__body">
+                        <span class="slds-listbox__option-text slds-listbox__option-text_entity search-placeholder">{!v.SearchKeyWord} in {!v.objectAPIName}</span>     
+                        
+                    </span>
+                </span>
+            </li>
+            </aura:if> 
+            <aura:iteration items="{!v.listOfSearchRecords}" var="singleRec">
+                <c:customLookupResult oRecord="{!singleRec}" IconName="{!v.IconName}"  additionalField="{!v.additionalField}" additionalFieldLabel="{!v.additionalFieldLabel}"/>
+            </aura:iteration>
+        </ul> 
+    </div>
+    
+    <!-- Advanced search popup -->
+    <aura:if isTrue="{!v.showSearch}">
+        <div role="dialog" tabindex="-1" aria-labelledby="header99" class="slds-modal slds-fade-in-open " >
+            <div class="slds-modal__container search-container">              
+                <div class="slds-modal__header">
+                    <button class="slds-button slds-modal__close slds-button--icon-inverse" title="Close" onclick="{!c.closeSearch}">
+                        X
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="header99" class="slds-text-heading--medium">{!v.label} Results</h2>                    
+                </div>             
+                <div class="slds-modal__content slds-p-around--medium">            
+                    <c:customLookupAdvancedSearch IconName="{!v.IconName}" objectAPIName="{!v.objectAPIName}" fieldAPIName="{!v.fieldAPIName}" additionalField="{!v.additionalField}" additionalFieldLabel="{!v.additionalFieldLabel}"  SearchKey="{#v.SearchKeyWord}"  filters="{!v.filters}"/>           
+                </div>  
+                <div class="slds-modal__footer">
+                    <div class="slds-button__icon_right slds-float_right ">                    
+                        <lightning:button variant="neutral" label="Cancel" onclick="{!c.closeSearch}"/>
+                    </div>
+                </div>
+            </div>
+        </div>      
+        <div class="slds-backdrop slds-backdrop--open"></div>    
+    </aura:if>
+</aura:component>
